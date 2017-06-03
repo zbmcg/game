@@ -107,6 +107,102 @@ class Character(object):
             print "| - %s" % i
         print '-' * 40
 
+    def fight(self, person):
+
+        fighting = True
+
+        print "You are fighting %s!" % person['name']
+
+        while fighting:
+
+            attr = ''
+            hurt = ''
+
+            print "You're at %d health and %d wits." % \
+                  (a_game.char.dict['health'],
+                   a_game.char.dict['wits'])
+            print "%s is at %d health and %d wits." % \
+                  (person['name'],
+                   person['health'],
+                   person['wits'])
+            print "[1] Perform an attack using your strength"
+            print "[2] Perform an attack using your cunning"
+            print "[3] Run away like a %s %s" % \
+                  (a_game.char.dict['adj'], a_game.char.dict['job'])
+
+            choice = raw_input("> ")
+
+            if choice == '1':
+
+                attr = 'strength'
+                hurt = 'health'
+
+            elif choice == '2':
+
+                attr = 'cunning'
+                hurt = 'wits'
+
+            elif choice == '3':
+
+                print "You run."
+
+                return
+
+            else:
+
+                print "Better luck next time."
+
+            dmg = randint(1, a_game.char.dict[attr]) - randint(1, person[attr])
+
+            if dmg > 0:
+
+                print "Success! You inflict %d damage to %s's %s!" % \
+                      (dmg, person['name'], hurt)
+
+                person[hurt] -= dmg
+
+            else:
+
+                print "Your attack fails."
+
+            if person[hurt] < 1:
+
+                print "%s is dead." % person['name']
+
+                person['status'] = "Dead"
+
+                for i in person['inventory']:
+
+                    print "You collect %s." % i
+
+                    a_game.char.dict['inventory'].append(i)
+
+                return
+
+            else:
+
+                print "%s is down to %d %s" % \
+                      (person['name'], person[hurt], hurt)
+
+            dmg = randint(1, person[attr]) - randint(1, a_game.char.dict[attr])
+
+            if dmg > 0:
+
+                print "Ouch! %s has dealt %d damage to your %s!" % \
+                      (person['name'], dmg, hurt)
+
+                a_game.char.dict[hurt] -= dmg
+
+                if a_game.char.dict[hurt] < 1:
+                    print "You are dead!"
+                    print "Load your save from the main menu."
+
+                    a_game.mainmenu()
+
+            else:
+
+                print "%s's attack fails." % person['name']
+
 
 class Dialogue(object):
 
@@ -127,11 +223,40 @@ class Objects(object):
         pass
 
 
-class Persons(object):
+class Person(object):
 
     def __init__(self):
 
-        pass
+        self.dict = {
+            'name': '',
+            'health': 0,
+            'wits': 0,
+            'strength': 0,
+            'cunning': 0,
+            'status': '',
+            'inventory': []
+        }
+
+
+class People(object):
+
+    def __init__(self):
+
+        self.bum = Person()
+
+    def f_bum(self):
+
+        if self.bum.dict['name'] == '':
+
+            self.bum.dict = {
+                'name': 'a bum',
+                'health': 4,
+                'wits': 4,
+                'strength': 3,
+                'cunning': 3,
+                'status': 'Drunk',
+                'inventory': ['a key', 'some matches']
+            }
 
 
 class Location(object):
@@ -142,10 +267,7 @@ class Location(object):
             'name': None,
             'entry': None,
             'desc': None,
-            'north': None,
-            'south': None,
-            'east': None,
-            'west': None,
+            'directions': {},
             'persons': [],
             'objects': []
         }
@@ -153,36 +275,21 @@ class Location(object):
     def help(self):
 
         print "[look] - Have a look around"
-        print "[go] - Lists where you can go"
-        print "[go north|south|east|west] - Go in that direction"
+        print "[north|south|east|west] - Go in that direction"
         print "[inspect <noun>] - Look closer at something"
         print "[interact <noun>] - Interact with something"
         print "[char] - Display your character information"
         print "[quit] - Go to the main menu"
 
-    def look(self, desc, persons, objects):
+    def look(self, desc, persons, objects, directions):
 
         print desc
         for p in persons:
             print "You see %s" % p
         for o in objects:
             print "You notice %s" % o
-
-    def go(self):
-
-        pass
-
-    def inspect(self):
-
-        pass
-
-    def interact(self):
-
-        pass
-
-    def quit(self):
-
-        pass
+        for k, v in directions.items():
+            print "To the %s is %s" % (k, v)
 
 
 class Map(object):
@@ -196,15 +303,13 @@ class Map(object):
     def f_apartment(self):
 
         if self.apartment.dict['name'] is None:
+
             self.apartment.dict['name'] = 'Apartment'
             self.apartment.dict['entry'] = """
                 A %s %s walks into an apartment.
                 """ % (a_game.char.dict['adj'], a_game.char.dict['job'])
             self.apartment.dict['desc'] = "The apartment smells like copper and electricity."
-            self.apartment.dict['north'] = None
-            self.apartment.dict['south'] = None
-            self.apartment.dict['east'] = "the street"
-            self.apartment.dict['west'] = None
+            self.apartment.dict['directions']['east'] = "the street"
             self.apartment.dict['persons'] = ['an old white cat']
             self.apartment.dict['objects'] = ['some papers', 'a table']
 
@@ -225,19 +330,10 @@ class Map(object):
 
                 self.apartment.look(self.apartment.dict['desc'],
                                     self.apartment.dict['persons'],
-                                    self.apartment.dict['objects'])
+                                    self.apartment.dict['objects'],
+                                    self.apartment.dict['directions'])
 
-            elif choice.lower() == 'go':
-
-                print "To the east is the street"
-
-            elif choice.lower() == 'go north' \
-                    or choice.lower() == 'go south' \
-                    or choice.lower() == 'go west':
-
-                print "You can't go that way."
-
-            elif choice.lower() == 'go east':
+            elif choice.lower() == 'east':
 
                 print "You head out to the street"
                 a_game.map.f_street()
@@ -299,15 +395,14 @@ class Map(object):
     def f_bar(self):
 
         if self.bar.dict['name'] is None:
+
             self.bar.dict['name'] = 'Bar'
             self.bar.dict['entry'] = """
                 A %s %s walks into a bar.
                 """ % (a_game.char.dict['adj'], a_game.char.dict['job'])
             self.bar.dict['desc'] = "The bar smells like old beer."
-            self.bar.dict['north'] = 'the back alley'
-            self.bar.dict['south'] = 'the street'
-            self.bar.dict['east'] = None
-            self.bar.dict['west'] = None
+            self.bar.dict['directions']['north'] = 'the back alley'
+            self.bar.dict['directions']['south'] = 'the street'
             self.bar.dict['persons'] = ['the bartender']
             self.bar.dict['objects'] = ['a hammer', 'a jukebox']
 
@@ -328,24 +423,15 @@ class Map(object):
 
                 self.bar.look(self.bar.dict['desc'],
                               self.bar.dict['persons'],
-                              self.bar.dict['objects'])
+                              self.bar.dict['objects'],
+                              self.bar.dict['directions'])
 
-            elif choice.lower() == 'go':
-
-                print "To the north is the back alley"
-                print "To the south is the street"
-
-            elif choice.lower() == 'go north':
+            elif choice.lower() == 'north':
 
                 print "You go to the back alley."
                 print "Just kidding, I haven't written that yet."
 
-            elif choice.lower() == 'go east' \
-                    or choice.lower() == 'go west':
-
-                print "You can't go that way."
-
-            elif choice.lower() == 'go south':
+            elif choice.lower() == 'south':
 
                 print "You head out to the street"
                 a_game.map.f_street()
@@ -390,19 +476,20 @@ class Map(object):
     def f_street(self):
 
         if self.street.dict['name'] is None:
+
             self.street.dict['name'] = 'Street'
             self.street.dict['entry'] = """
                 A %s %s walks into a street.
                 """ % (a_game.char.dict['adj'], a_game.char.dict['job'])
             self.street.dict['desc'] = "The street smells like piss."
-            self.street.dict['north'] = 'the bar'
-            self.street.dict['south'] = None
-            self.street.dict['east'] = None
-            self.street.dict['west'] = 'your apartment'
+            self.street.dict['directions']['north'] = 'the bar'
+            self.street.dict['directions']['west'] = 'your apartment'
             self.street.dict['persons'] = ['a bum']
             self.street.dict['objects'] = ['a fire hydrant', 'a truck']
 
         a_game.char.dict['location'] = "Street"
+        a_game.prs.f_bum()
+
         print self.street.dict['entry']
 
         choosing = True
@@ -419,32 +506,38 @@ class Map(object):
 
                 self.street.look(self.street.dict['desc'],
                                  self.street.dict['persons'],
-                                 self.street.dict['objects'])
+                                 self.street.dict['objects'],
+                                 self.street.dict['directions'])
 
-            elif choice.lower() == 'go':
-
-                print "To the north is the bar"
-                print "To the west is your apartment"
-
-            elif choice.lower() == 'go north':
+            elif choice.lower() == 'north':
 
                 print "You go to the bar."
                 a_game.map.f_bar()
 
-            elif choice.lower() == 'go east' \
-                    or choice.lower() == 'go south':
-
-                print "You can't go that way."
-
-            elif choice.lower() == 'go west':
+            elif choice.lower() == 'west':
 
                 print "You go to your apartment"
                 a_game.map.f_apartment()
 
-            elif choice.lower() == 'inspect bum' \
-                    or choice.lower() == 'interact bum':
+            elif choice.lower() == 'inspect bum':
 
-                print "Spare change?."
+                if a_game.prs.bum.dict['status'] == "Dead":
+
+                    print "You killed him, you bastard!"
+
+                else:
+
+                    print "He doesn't look like he wants to be bothered."
+
+            elif choice.lower() == 'interact bum':
+
+                if a_game.prs.bum.dict['status'] == "Dead":
+
+                    print "He's already dead!"
+
+                else:
+
+                    a_game.char.fight(a_game.prs.bum.dict)
 
             elif choice.lower() == 'inspect fire hydrant':
 
@@ -468,7 +561,6 @@ class Map(object):
                 else:
 
                     print "You've already broken this."
-
 
             elif choice.lower() == 'inspect truck':
 
@@ -499,7 +591,7 @@ class Game(object):
 
         self.char = Character()
         self.obj = Objects()
-        self.prs = Persons()
+        self.prs = People()
         self.map = Map()
         self.dlg = Dialogue()
 
@@ -507,9 +599,9 @@ class Game(object):
 
         print "You're in a game now. This is the main menu."
         print "Pick something."
-        print "[1. New Game]"
-        print "[2. Load Save]"
-        print "[3. Quit]"
+        print "[1] New Game"
+        print "[2] Load Save"
+        print "[3] Quit"
 
         choosing = True
 
@@ -548,7 +640,7 @@ class Game(object):
 
             self.char.display()
 
-            done = raw_input("Is that you?[Y/N]\n> ")
+            done = raw_input("Is that you?[Y|N]\n> ")
 
             if done.lower() == 'y':
 
@@ -558,8 +650,8 @@ class Game(object):
 
                 print "Alright. I think I see another ID."
                 print "Do you wanna look or just tell me who you are?"
-                print "[1. No idea who I am...]"
-                print "[2. Just make something up]"
+                print "[1] No idea who I am..."
+                print "[2] Just make something up"
                 choice = raw_input("> ")
 
                 if choice == '1':
@@ -619,6 +711,7 @@ class Game(object):
                     a_game.map.apartment.dict = pickle.load(f)
                     a_game.map.bar.dict = pickle.load(f)
                     a_game.map.street.dict = pickle.load(f)
+                    a_game.prs.bum.dict = pickle.load(f)
 
             elif save_file == 'Nevermind.dat':
 
@@ -653,7 +746,7 @@ class Game(object):
             pickle.dump(a_game.map.apartment.dict, f)
             pickle.dump(a_game.map.bar.dict, f)
             pickle.dump(a_game.map.street.dict, f)
-
+            pickle.dump(a_game.prs.bum.dict, f)
 
 a_game = Game()
 a_game.mainmenu()
