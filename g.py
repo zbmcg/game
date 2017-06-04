@@ -1,6 +1,7 @@
 from random import randint
 import pickle
 import os
+import time
 
 
 class Character(object):
@@ -25,7 +26,7 @@ class Character(object):
                        'Summerford', 'Tarp', 'Umbrage',
                        'Vetinari', 'Woolridge', 'Yank']
 
-        self.adjs = ['amorous', 'bitchy', 'cunty',
+        self.adjs = ['amorous', 'bitchy', 'clueless',
                      'daring', 'effeminate', 'fat',
                      'gunkin', 'heroic', 'illin',
                      'jealous', 'kind', 'lame',
@@ -48,7 +49,9 @@ class Character(object):
             'adj': '',
             'job': '',
             'health': 0,
+            'mhealth': 0,
             'wits': 0,
+            'mwits': 0,
             'strength': 0,
             'cunning': 0,
             'status': '',
@@ -62,7 +65,9 @@ class Character(object):
         self.dict['adj'] = self.adjs[randint(0, 23)]
         self.dict['job'] = self.jobs[randint(0, 23)]
         self.dict['health'] = randint(4, 9)
+        self.dict['mhealth'] = self.dict['health']
         self.dict['wits'] = 13 - self.dict['health']
+        self.dict['mwits'] = self.dict['wits']
         self.dict['strength'] = randint(2, 6)
         self.dict['cunning'] = 8 - self.dict['strength']
         self.dict['status'] = "Healthy"
@@ -76,7 +81,9 @@ class Character(object):
         self.dict['job'] = raw_input("What's your trade?\n> ")
         self.dict['health'] = int(raw_input(
             "Listen. You've got 13 points for Health and Wits. How many for Health?\n> "))
+        self.dict['mhealth'] = self.dict['health']
         self.dict['wits'] = 13 - int(self.dict['health'])
+        self.dict['mwits'] = self.dict['wits']
         print "Your wits are %d" % self.dict['wits']
         if self.dict['wits'] < 0:
             print "You're gonna regret that, smartass."
@@ -152,7 +159,7 @@ class Character(object):
 
                 print "Better luck next time."
 
-            dmg = randint(1, a_game.char.dict[attr]) - randint(1, person[attr])
+            dmg = randint(1, a_game.char.dict[attr]) - randint(1, person[attr]) + 1
 
             if dmg > 0:
 
@@ -184,7 +191,19 @@ class Character(object):
                 print "%s is down to %d %s" % \
                       (person['name'], person[hurt], hurt)
 
-            dmg = randint(1, person[attr]) - randint(1, a_game.char.dict[attr])
+            coin = randint(0, 1)
+
+            if coin == 0:
+
+                attr = 'strength'
+                hurt = 'health'
+
+            else:
+
+                attr = 'cunning'
+                hurt = 'wits'
+
+            dmg = randint(1, person[attr]) - randint(1, a_game.char.dict[attr]) + 1
 
             if dmg > 0:
 
@@ -311,7 +330,7 @@ class Map(object):
             self.apartment.dict['desc'] = "The apartment smells like copper and electricity."
             self.apartment.dict['directions']['east'] = "the street"
             self.apartment.dict['persons'] = ['an old white cat']
-            self.apartment.dict['objects'] = ['some papers', 'a table']
+            self.apartment.dict['objects'] = ['some papers', 'a table', 'a bed']
 
         a_game.char.dict['location'] = "Apartment"
         print self.apartment.dict['entry']
@@ -378,6 +397,20 @@ class Map(object):
                 print "You take the statuette."
                 self.apartment.dict['objects'].remove('a statuette')
                 a_game.char.dict['inventory'].append('a statuette')
+
+            elif choice.lower() == 'inspect bed':
+
+                print "It looks comfortable enough."
+
+            elif choice.lower() == 'interact bed':
+
+                print "You catch some much-needed rest."
+                a_game.savegame()
+                os.system('clear')
+                time.sleep(5)
+                a_game.char.dict['health'] = a_game.char.dict['mhealth']
+                a_game.char.dict['wits'] = a_game.char.dict['mwits']
+                print "You feel refreshsed!"
 
             elif choice.lower() == 'char':
 
@@ -597,11 +630,13 @@ class Game(object):
 
     def mainmenu(self):
 
-        print "You're in a game now. This is the main menu."
-        print "Pick something."
-        print "[1] New Game"
-        print "[2] Load Save"
-        print "[3] Quit"
+        print '-' * 19
+        print '|    MAIN MENU    |'
+        print '-' * 19
+        print "|  [1] New Game   |"
+        print "|  [2] Load Save  |"
+        print "|  [3] Quit       |"
+        print '-' * 19
 
         choosing = True
 
@@ -630,6 +665,7 @@ class Game(object):
 
     def newgame(self):
 
+        print "NEW GAME"
         print self.dlg.intro1
 
         self.char.roll()
